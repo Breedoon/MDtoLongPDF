@@ -51,7 +51,7 @@ def _get_path_name_ext(filepath: str):
 def _get_modules_to_execute(in_filepath, out_pdf):
     # For now, use given file to convert to PDF (if .md will be sorted out later)
     html = in_filepath
-    filename, dir_path, ext = _get_path_name_ext(in_filepath)
+    dir_path, filename, ext = _get_path_name_ext(in_filepath)
 
     modules = []
 

@@ -65,9 +65,9 @@ class MdToHTML(Module):
               f""" -f markdown -t html "{self.input}" -o "{self.output}" """
 
         # if given title will put it onto the HTML so better not
-        # if self.title is not None:
-        #     cmd += f"""--metadata title="{self.title}" """
         if self.title is not None:
+            cmd += f"""--title="{self.title}" """
+        if self.wdir is not None:
             cmd += f"""--resource-path="{self.wdir}" """
 
         os.system(cmd)
