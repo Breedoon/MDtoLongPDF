@@ -39,7 +39,7 @@ class MdToMdWithoutWikilinks(Module):
             sections = section_pattern.findall(target)
             if len(sections) != 0:  # referencing a section in this link
                 file, section = sections[0]
-                section = re.compile(r'\ +').sub('-', re.compile(r'[^a-zA-Z\ ]').sub(' ', section)).lower()
+                section = re.compile(r'\ +').sub('-', re.compile(r'[^a-zA-Z0-9\ ]').sub(' ', section)).lower()
                 target = file + '#' + section
             new_md_data = new_md_data + md_data[prev_i: match.span()[0]] + f"[{label}]({target})"
             prev_i = match.span()[1]
