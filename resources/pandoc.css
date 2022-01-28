@@ -337,3 +337,11 @@ table td {
   }
 }
 
+pre.sourceCode, code.sourceCode {
+  background-color: #ececec;
+  overflow: visible;
+}
+
+div.sourceCode {
+  zoom: 60%;
+}
