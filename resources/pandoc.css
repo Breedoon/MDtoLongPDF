@@ -22,10 +22,6 @@ body {
   padding: 0;
 }
 
-.math {
-    zoom: 120%;
-}
-
 figcaption {
     visibility: hidden; /* so that [this part](img.jpg) is not displayed */
 }

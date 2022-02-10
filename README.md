@@ -77,12 +77,6 @@ The default PDF margins used are 15mm from each side, and can be changed in [mod
 
 ### Rendering LaTeX
 
-`wkhtmltopdf` is the only html-to-pdf tool I found that allows to specify arbitrarily large page sizes, which is necessary. A disadvantage of `wkhtmltopdf` is that I couldn't get it to compile MathJax, or MathML, or KaTeX, or any other [pandoc-supported way to export LaTeX into HTML](https://www.uv.es/wikibase/doc/cas/pandoc_manual_2.7.3.wiki?13). So, the only working solution was to render LaTeX into SVGs with [latex.codecogs.com](https://latex.codecogs.com/) which did slow things down (~2 seconds per equation compared to 3-5 seconds required for the whole process) but was still working fairly well. 
-
-A possible alternative would be to use GladTeX, also supported by `pandoc` and thus generate SVGs locally, but GladTeX is a pain to set up so I didn't even bother.
-
-Rendering directly from markdown into LaTeX with `pandoc` allowed for paper size to specified as `-V geometry:paperheight=1000mm,paperwidth=210mm,margin=0pt` but that way, the footnotes appear at the bottom of the page which makes calculating the most optimal page size an unreliable mess.
-
 ### Wikilinks
 
 At the moment of writing, pandoc still does not have support for markdown \[\[wikilinks\]\] so I had to write a short script of my own to preprocess my markdown files containing wikilinks, which might not work in some edge cases (e.g., double \[\[\]\] inside of code blocks, etc), though it has worked well for most of my use cases. 
