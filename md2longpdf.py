@@ -64,8 +64,7 @@ def _get_modules_to_execute(in_filepath, out_pdf):
         html = temp_files['html']
 
     modules += [
-        HTMLtoPDF(html, temp_files['pdf']),
-        RemoveBlankPDFPages(temp_files['pdf'], out_pdf),
+        HTMLtoPDF(html, out_pdf),
     ]
 
     return modules

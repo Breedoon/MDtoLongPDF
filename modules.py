@@ -164,10 +164,3 @@ class HTMLtoPDF(Module):
           margin: {top_mm}mm {right_mm}mm 0mm {left_mm}mm;
         }}
         </style>""", features="lxml").style
-
-
-class RemoveBlankPDFPages(Module):
-    """Removes all pages from the PDF except for page 1 (to remove accidentally created blank second page"""
-
-    def run(self):
-        os.system(f"""qpdf --pages "{self.input}" 1  -- "{self.input}" "{self.output}" """)
