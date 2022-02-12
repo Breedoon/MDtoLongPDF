@@ -1,5 +1,6 @@
 import os
 
+from bs4 import BeautifulSoup
 import numpy as np
 from pdfminer.layout import LAParams, LTTextBox
 from pdfminer.pdfpage import PDFPage
@@ -61,7 +62,7 @@ class MdToHTML(Module):
         self.wdir = workdir
 
     def run(self):
-        cmd = f"""pandoc --css=resources/pandoc.css --self-contained --katex""" \
+        cmd = f"""pandoc --css=resources/pandoc.css --self-contained --mathml """ \
               f""" -f markdown -t html "{self.input}" -o "{self.output}" """
 
         # if given title will put it onto the HTML so better not
@@ -85,7 +86,7 @@ class HTMLtoPDF(Module):
 
     # margins and dimensions of paper (margins must be in mm)
     DEFAULT_PARAMS = dict(ml='15mm', mr='15mm', mt='15mm', mb='15mm', page_width='210mm', page_height='297mm')
-    CMD = """wkhtmltopdf -L {ml} -R {mr} -T {mt} -B {mb} --enable-javascript --no-stop-slow-scripts --page-width {page_width} --page-height {page_height} --enable-local-file-access "{input}" "{output}" """
+    CMD = """prince "{input}" -o "{output}" """
     PTS_IN_MM = 1 / 25.4 * 72
 
     def run(self):
@@ -106,21 +107,14 @@ class HTMLtoPDF(Module):
             return len(list(PDFPage.get_pages(f)))
 
     def _make_max_pdf(self, page_height_m=10):
-        params = self.DEFAULT_PARAMS.copy()
-        params['mb'] = '0mm'  # remove bottom margin to make a super long pdf
-        params['page_height'] = f'{page_height_m}m'
-
-        os.system(self.CMD.format(**params, input=self.input, output=self.output))
+        self._write_pdf(page_height_mm=page_height_m * 1000)
 
     def _make_fit_pdf(self, page_height_mm):
-        params = self.DEFAULT_PARAMS.copy()
-        params['page_height'] = f'{page_height_mm}mm'
-
-        os.system(self.CMD.format(**params, input=self.input, output=self.output))
+        self._write_pdf(page_height_mm=page_height_mm)
 
     def _calculate_new_page_height_mm(self):
         lowest_y = self._get_lowest_y_mm()
-        new_height = np.ceil(lowest_y) + float(self.DEFAULT_PARAMS['mb'][:-2])
+        new_height = np.ceil(lowest_y)
         return new_height
 
     def _get_lowest_y_mm(self):
@@ -147,7 +141,29 @@ class HTMLtoPDF(Module):
             page_height = page.mediabox[3]
 
         lowest_y = np.array(bboxes)[:, [1, 3]].min()  # coordinates begin from lower left
-        return (page_height - lowest_y) / self.PTS_IN_MM  # convert points to m
+        return (page_height - lowest_y) / self.PTS_IN_MM  # convert points to mm
+
+    def _write_pdf(self, **kwargs):
+        style = self._get_page_style(**kwargs)
+
+        temp_html = 'temp/temptemp.html'
+
+        bs = BeautifulSoup(open(self.input).read(), features="lxml")
+        bs.head.append(style)
+
+        open(temp_html, "w").write(str(bs))
+
+        os.system(self.CMD.format(input=temp_html, output=self.output))
+
+    @staticmethod
+    def _get_page_style(page_width_mm=210, page_height_mm=297, left_mm=15, right_mm=15, top_mm=15, bottom_mm=15):
+        """:param m*: margin left/right/top/bottom"""
+        return BeautifulSoup(f"""<style>
+        @page {{
+        size: {page_width_mm}mm {page_height_mm + bottom_mm}mm; /* */
+          margin: {top_mm}mm {right_mm}mm 0mm {left_mm}mm;
+        }}
+        </style>""", features="lxml").style
 
 
 class RemoveBlankPDFPages(Module):

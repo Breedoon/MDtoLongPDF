@@ -1,7 +1,3 @@
-/*
- * I add this to html files generated with pandoc.
- */
-
 html {
   font-size: 120%;
   overflow-y: scroll;
@@ -20,6 +16,10 @@ body {
   /*background: #fefefe;*/
   margin: 0 0;
   padding: 0;
+}
+
+h1:first-child, h2:first-child, h3:first-child, h4:first-child, h5:first-child, h6:first-child {
+  margin-top: 0; /* So that heading does not have */
 }
 
 figcaption {
@@ -279,18 +279,10 @@ table td {
     max-width: 100%;
   }
 
-  a, a:visited {
-    text-decoration: underline;
-  }
-
   hr {
     height: 1px;
     border: 0;
     border-bottom: 1px solid black;
-  }
-
-  a[href]:after {
-    content: " (" attr(href) ")";
   }
 
   abbr[title]:after {
@@ -315,14 +307,6 @@ table td {
     max-width: 100% !important;
   }
 
-  @page :left {
-    margin: 15mm 20mm 15mm 10mm;
-}
-
-  @page :right {
-    margin: 15mm 10mm 15mm 20mm;
-}
-
   p, h2, h3 {
     orphans: 3;
     widows: 3;
@@ -333,11 +317,9 @@ table td {
   }
 }
 
-pre.sourceCode, code.sourceCode {
-  background-color: #ececec;
-  overflow: visible;
-}
-
 div.sourceCode {
-  zoom: 60%;
+  background-color: #ececec !important;
+  font-size: 60%;
+  border: 0px !important;
+  overflow: visible;
 }
