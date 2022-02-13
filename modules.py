@@ -84,10 +84,9 @@ class HTMLtoPDF(Module):
         then generate a new PDF with paper height exactly to fit the lowest item + margin
     """
 
-    # margins and dimensions of paper (margins must be in mm)
-    DEFAULT_PARAMS = dict(ml='15mm', mr='15mm', mt='15mm', mb='15mm', page_width='210mm', page_height='297mm')
     CMD = """prince "{input}" -o "{output}" """
-    PTS_IN_MM = 1 / 25.4 * 72
+    PTS_IN_MM = 1 / 25.4 * 72  # 72 points in inch, 1 inch = 22.4 mm
+    _STYLE_TAG_ID = 'page-style'
 
     def run(self):
         for page_height_m in [10, 100, 1000]:  # -meter-long paper
@@ -144,23 +143,25 @@ class HTMLtoPDF(Module):
         return (page_height - lowest_y) / self.PTS_IN_MM  # convert points to mm
 
     def _write_pdf(self, **kwargs):
-        style = self._get_page_style(**kwargs)
-
-        temp_html = 'temp/temptemp.html'
-
         bs = BeautifulSoup(open(self.input).read(), features="lxml")
+
+        existing_style = bs.find('style', dict(id=self._STYLE_TAG_ID))  # if added page style before
+        if existing_style is not None:  # added this style on prev iteration, remove and add new one
+            existing_style.extract()
+
+        style = self._get_page_style(**kwargs)
         bs.head.append(style)
 
-        open(temp_html, "w").write(str(bs))
+        open(self.input, "w").write(str(bs))
 
-        os.system(self.CMD.format(input=temp_html, output=self.output))
+        os.system(self.CMD.format(input=self.input, output=self.output))
 
     @staticmethod
     def _get_page_style(page_width_mm=210, page_height_mm=297, left_mm=15, right_mm=15, top_mm=15, bottom_mm=15):
         """:param m*: margin left/right/top/bottom"""
-        return BeautifulSoup(f"""<style>
+        return BeautifulSoup(f"""<style id="{HTMLtoPDF._STYLE_TAG_ID}">
         @page {{
-        size: {page_width_mm}mm {page_height_mm + bottom_mm}mm; /* */
+        size: {page_width_mm}mm {page_height_mm + bottom_mm}mm;
           margin: {top_mm}mm {right_mm}mm 0mm {left_mm}mm;
         }}
         </style>""", features="lxml").style
