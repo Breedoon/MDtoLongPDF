@@ -9,12 +9,11 @@
 - [Usage](#usage)
     -  [Default Parameters](#default-parameters)
 - [Known Issues](#known-issues)
-	- [Latex](#latex)
 	- [Wikilinks](#wikilinks)
 
 ## About The Project  
 
-Pagination in PDF is deprecated. The vast majority of PDF documents nowadays were never intended to be nor will ever be printed. Yet, page breaks continue to split sections, break tables, move figures around leaving huge chunks of empty space, etc, all to serve a function that is no longer needed. 
+Pagination in PDF sucks. The vast majority of PDF documents nowadays were never intended to be nor will ever be printed. Yet, page breaks continue to split sections, break tables, move figures around leaving huge chunks of empty space, etc, all to serve a function that is no longer needed. 
 
 So, this script aims to provide a workaround when converting from inherently unpaginated formats, namely, Markdown and HTML into PDF by putting all of their rendered content onto a single very long PDF page. See [README.pdf](resources/README.pdf) for an example.
 
@@ -26,14 +25,13 @@ So, this script aims to provide a workaround when converting from inherently unp
     * `numpy`
     * `pdfminer`
 * `pandoc` for md -> html
-* `wkhtmltopdf` for html -> pdf
-* `qpdf` to clean up after `wkhtmltopdf`
+* `Prince XML` for html -> pdf
   
 ### Installation  
   
 _Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._  
   
-1. Install [`pandoc`](https://pandoc.org/installing.html), [`wkhtmltopdf`](https://wkhtmltopdf.org/downloads.html), and [`qpdf`](https://formulae.brew.sh/formula/qpdf)
+1. Install [`pandoc`](https://pandoc.org/installing.html), [`Prince XML`](https://www.princexml.com/), and [`qpdf`](https://formulae.brew.sh/formula/qpdf)
 2. Clone the repo  
     ```sh  
     git clone https://github.com/Breedoon/MDtoLongPDF.git
@@ -48,7 +46,7 @@ _Below is an example of how you can instruct your audience on installing and set
 1. To use the script, run:
 
 ```sh
-python3 md2longpdf.py
+python md2longpdf.py
 ```
 
 2. Then you will be prompted to enter path to you `.md` or `.html` file, for example:
@@ -74,8 +72,6 @@ The stylesheet used to generate HTML is [resources/pandoc.css](resources/pandoc.
 The default PDF margins used are 15mm from each side, and can be changed in [modules.py](modules.py) in the parameters of `HTMLtoPDF` class.
 
 ## Known Issues
-
-### Rendering LaTeX
 
 ### Wikilinks
 
