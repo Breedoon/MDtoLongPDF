@@ -9,28 +9,28 @@
 - [Usage](#usage)
     -  [Default Parameters](#default-parameters)
 - [Known Issues](#known-issues)
+	- [Removing PrinceXML Watermark](#removing-princexml-watermark)
 	- [Wikilinks](#wikilinks)
 
 ## About The Project  
 
-Pagination in PDF sucks. The vast majority of PDF documents nowadays were never intended to be nor will ever be printed. Yet, page breaks continue to split sections, break tables, move figures around leaving huge chunks of empty space, etc, all to serve a function that is no longer needed. 
+Pagination in PDF sucks. The vast majority of PDF documents nowadays were never intended to, nor will ever be printed. Yet, page breaks continue to split sections, break tables, move figures around leaving huge chunks of empty space, etc, all to serve a function that is no longer needed. 
 
-So, this script aims to provide a workaround when converting from inherently unpaginated formats, namely, Markdown and HTML into PDF by putting all of their rendered content onto a single very long PDF page. See [README.pdf](resources/README.pdf) for an example.
+So, this script aims to provide a workaround when converting from inherently unpaginated formats, namely, Markdown and HTML, into PDF by putting all of their rendered content onto a single very long PDF page. See [README.pdf](resources/README.pdf) for an example.
 
 ## Getting Started  
   
 ### Prerequisites  
   
-* Python 3.x (tested on Python 3.9.7)
+* Python 3.9+
     * `numpy`
     * `pdfminer`
 * `pandoc` for md -> html
-* `Prince XML` for html -> pdf
+* `PrinceXML` for html -> pdf
+* (optional) `qpdf` to remove the watermark of free `PrinceXML` version - extra convenience but can be easily removed manually or by purchasing the license. See [Removing PrinceXML Watermark](#removing-princexml-watermark) section for caveats. 
   
 ### Installation  
-  
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._  
-  
+
 1. Install [`pandoc`](https://pandoc.org/installing.html), [`Prince XML`](https://www.princexml.com/), and [`qpdf`](https://formulae.brew.sh/formula/qpdf)
 2. Clone the repo  
     ```sh  
@@ -65,13 +65,23 @@ or leave blank to generate in the same folder with the same name
 ```
 4. Done! Find your PDF: [resources/README.pdf](resources/README.pdf)
 
+If you do not have `qpdf` installed to remove the `PxinceXML` watermark, the output file will still be generated, just with the watermark. 
+
 ### Default Parameters
 
-The stylesheet used to generate HTML is [resources/pandoc.css](resources/pandoc.css) based on [this stylesheet](https://gist.github.com/killercup/5917178). The simplest way to change scale is to modify `html { font-size: 120%; ... }` and `.math {  zoom: 120%; }`.
+The stylesheet used to generate HTML is [resources/pandoc.css](resources/pandoc.css) based on [this stylesheet](https://gist.github.com/killercup/5917178). The simplest way to change scale is to modify `html { font-size: 120%; ... }`.
 
-The default PDF margins used are 15mm from each side, and can be changed in [modules.py](modules.py) in the parameters of `HTMLtoPDF` class.
+The default PDF margins used are 15mm from each side, and can be changed in [modules.py](modules.py) in the `HTMLtoPDF` class.
 
 ## Known Issues
+
+### Removing PrinceXML Watermark
+
+A free version of PrinceXML leaves a watermark in the top right corner of the produced PDF. While this watermark can easily be removed manually (or by purchasing a PrinceXML license, duh), I thought it would be useful to add the ability to remove it automatically at the end of the process.
+
+Doing it did not prove easy using as little external tools as possible. `qpdf` (or potentially `pdftk`) would be necessary anyway to (un)compress the PDF to edit the watermark out. However, existing fixes (like [this one](http://www.alecjacobson.com/weblog/?p=4455) or [this one](https://stackoverflow.com/questions/49598797/remove-pdf-annotations-via-command-line)) always ended up either not working, damaging the PDF, or producing a PDF without the watermark or any other annotations including all hyperlinks within the document, which was too high of a cost. After some inquiry into PDF format, it turned out that the easiest modification to a PDF that would not damage the file should replace some content with the content of identical length (e.g., `/AP 0 41` would need to be `abcdefgh` - any 8 characters) because otherwise XREF gets damaged, and it's not very easy to repair it (`qpdf` and [`Ghostrcript`](https://superuser.com/questions/278562/how-can-i-fix-repair-a-corrupted-pdf-file) did not handle it). So, after some experimentation, I found that if the coordinates of the visible box (/Rect) are to ones that don't make sense (like negative ones), the box visible part of the note disappears. So, I decided to just change the x-coordinate (which should be the same for all documents of the default width, 210mm) to a negative value.
+
+This is a not very generalizable solution, as it works only on unix-like systems (which have `sed` command), only with pages of A4 width (210mm), requires an extra command-line tool to set up (qpdf), and even then the watermark just becomes invisible rather than disappears, and can still be found through random clicking. But this was good enough to solve my problem and was not worth spending many more hours trying to generalize it.
 
 ### Wikilinks
 

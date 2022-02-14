@@ -42,6 +42,7 @@ def _get_modules_to_execute(in_filepath, out_pdf):
 
     modules += [
         HTMLtoPDF(),
+        RemovePrinceWatermark(),
         ReturnFile(out_pdf)
     ]
 

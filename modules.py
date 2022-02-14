@@ -1,4 +1,5 @@
 import os
+from functools import cache
 
 from bs4 import BeautifulSoup
 import numpy as np
@@ -14,7 +15,7 @@ temp_dir = 'temp'
 if not os.path.exists(temp_dir):
     os.makedirs(temp_dir)
 
-temp_file = lambda ext: f'{temp_dir}/temp.{ext}'
+temp_file = lambda ext, filename='temp': f'{temp_dir}/{filename}.{ext}'
 
 
 class Module:
@@ -24,16 +25,24 @@ class Module:
     OUTPUT_FORMAT = '~'
 
     @property
-    def input(self):
+    def _input_source(self):
         return temp_file(self.INPUT_FORMAT)
 
     @property
     def output(self):
         return temp_file(self.OUTPUT_FORMAT)
 
+    @property
+    @cache  # so that its name is randomly generated once and then reused
+    def input(self):
+        """Internal file used in case input and output files are of same format"""
+        return temp_file(self.OUTPUT_FORMAT, filename=f"temp-{np.random.randint(1000)}")
+
     def run(self):
         """Runs the module"""
+        shutil.copyfile(self._input_source, self.input)  # copy
         self._run()
+        os.remove(self.input)  # remove the temp input
 
     def _run(self):
         raise NotImplemented('This method needs to be override by child modules')
@@ -197,7 +206,7 @@ class CopyFile(Module):
         self._filepath = filepath
         self._ext = filepath.strip().split('.')[-1]  # extract extension
 
-    def _run(self):
+    def run(self):
         shutil.copyfile(self.input, self.output)
 
 
@@ -209,17 +218,54 @@ class FetchFile(CopyFile):
         return self._filepath
 
     @property
-    def OUTPUT_FORMAT(self):
-        return self._ext
+    def output(self):
+        return temp_file(self._ext)
 
 
 class ReturnFile(CopyFile):
     """Copies a file from temp environment to destination"""
 
     @property
+    def input(self):
+        return temp_file(self._ext)
+
+    @property
     def output(self):
         return self._filepath
 
-    @property
-    def INPUT_FORMAT(self):
-        return self._ext
+
+class ProcessPDF(Module):
+    """To avoid writing input and output format as pdf"""
+    INPUT_FORMAT = 'pdf'
+    OUTPUT_FORMAT = 'pdf'
+
+
+class RemovePrinceWatermark(ProcessPDF):
+    """
+    Bonus module to remove PrinceXML watermark from the top right corner.
+    This works only on Unix/Ma, only with installed qpdf and only for A4-width paper.
+    Normally, this watermark can easily be removed manually anyway.
+    """
+
+    def _run(self):
+        try:
+            _UncompressPDF().run()
+            _RemovePrinceWatermarkBox().run()
+            _CompressPDF().run()
+        except Exception:  # can't remove watermark, it's fine, generate the pdf anyway
+            pass
+
+
+class _RemovePrinceWatermarkBox(ProcessPDF):
+    def _run(self):
+        os.system(f"""LANG=C LC_ALL=C sed -e "s/580\.2756/-40\.2756/g" < "{self.input}" > "{self.output}" """)
+
+
+class _UncompressPDF(ProcessPDF):
+    def _run(self):
+        os.system(f"""qpdf --stream-data=uncompress "{self.input}" "{self.output}" """)
+
+
+class _CompressPDF(ProcessPDF):
+    def _run(self):
+        os.system(f"""qpdf --stream-data=compress "{self.input}" "{self.output}" """)
