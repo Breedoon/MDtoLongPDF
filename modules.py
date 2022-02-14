@@ -7,23 +7,43 @@ from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.converter import PDFPageAggregator
+import shutil
+
+temp_dir = 'temp'
+
+if not os.path.exists(temp_dir):
+    os.makedirs(temp_dir)
+
+temp_file = lambda ext: f'{temp_dir}/temp.{ext}'
 
 
 class Module:
-    def __init__(self, in_filepath, out_filepath):
-        self.input = in_filepath
-        self.output = out_filepath
+    """Generic file conversion module class. Subclasses will need to override `_run()` method."""
 
-        # Delete output file if already exists
-        if os.path.exists(self.output):
-            os.remove(self.output)
+    INPUT_FORMAT = '~'
+    OUTPUT_FORMAT = '~'
+
+    @property
+    def input(self):
+        return temp_file(self.INPUT_FORMAT)
+
+    @property
+    def output(self):
+        return temp_file(self.OUTPUT_FORMAT)
 
     def run(self):
-        pass
+        """Runs the module"""
+        self._run()
+
+    def _run(self):
+        raise NotImplemented('This method needs to be override by child modules')
 
 
 class MdToMdWithoutWikilinks(Module):
-    def run(self):
+    INPUT_FORMAT = 'md'
+    OUTPUT_FORMAT = 'md'
+
+    def _run(self):
         import re
 
         with open(self.input, 'r') as f:
@@ -47,21 +67,23 @@ class MdToMdWithoutWikilinks(Module):
 
         new_md_data = new_md_data + md_data[prev_i:]
 
-        with open(self.output, 'w+') as f:
+        with open(self.output, 'w') as f:
             f.write(new_md_data)
 
 
 class MdToHTML(Module):
-    def __init__(self, in_filepath, out_filepath, title=None, workdir=None):
+    INPUT_FORMAT = 'md'
+    OUTPUT_FORMAT = 'html'
+
+    def __init__(self, title=None, workdir=None):
         """
         :param title: Title to be given to the HTML file
         :param workdir: directory from which the referenced files can be accessed (images, etc)
         """
-        super().__init__(in_filepath, out_filepath)
         self.title = title
         self.wdir = workdir
 
-    def run(self):
+    def _run(self):
         cmd = f"""pandoc --css=resources/pandoc.css --self-contained --mathml """ \
               f""" -f markdown -t html "{self.input}" -o "{self.output}" """
 
@@ -75,6 +97,8 @@ class MdToHTML(Module):
 
 
 class HTMLtoPDF(Module):
+    INPUT_FORMAT = 'html'
+    OUTPUT_FORMAT = 'pdf'
     """
     Step 1:
         generate a PDF with maximum possible page length (10m+) to fit all the content
@@ -88,7 +112,7 @@ class HTMLtoPDF(Module):
     PTS_IN_MM = 1 / 25.4 * 72  # 72 points in inch, 1 inch = 22.4 mm
     _STYLE_TAG_ID = 'page-style'
 
-    def run(self):
+    def _run(self):
         for page_height_m in [10, 100, 1000]:  # -meter-long paper
             self._make_max_pdf(page_height_m=page_height_m)
             if self._get_output_page_count() == 1:  # content fit on one page, no need to try to increase paper size
@@ -158,10 +182,44 @@ class HTMLtoPDF(Module):
 
     @staticmethod
     def _get_page_style(page_width_mm=210, page_height_mm=297, left_mm=15, right_mm=15, top_mm=15, bottom_mm=15):
-        """:param m*: margin left/right/top/bottom"""
         return BeautifulSoup(f"""<style id="{HTMLtoPDF._STYLE_TAG_ID}">
         @page {{
         size: {page_width_mm}mm {page_height_mm + bottom_mm}mm;
           margin: {top_mm}mm {right_mm}mm 0mm {left_mm}mm;
         }}
         </style>""", features="lxml").style
+
+
+class CopyFile(Module):
+    """Parent class for copying a file"""
+
+    def __init__(self, filepath):
+        self._filepath = filepath
+        self._ext = filepath.strip().split('.')[-1]  # extract extension
+
+    def _run(self):
+        shutil.copyfile(self.input, self.output)
+
+
+class FetchFile(CopyFile):
+    """Copies a file from outside of temp folder"""
+
+    @property
+    def input(self):
+        return self._filepath
+
+    @property
+    def OUTPUT_FORMAT(self):
+        return self._ext
+
+
+class ReturnFile(CopyFile):
+    """Copies a file from temp environment to destination"""
+
+    @property
+    def output(self):
+        return self._filepath
+
+    @property
+    def INPUT_FORMAT(self):
+        return self._ext

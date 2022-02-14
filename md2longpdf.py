@@ -1,18 +1,6 @@
 import os
 
-from modules import MdToMdWithoutWikilinks, MdToHTML, HTMLtoPDF, RemoveBlankPDFPages
-
-temp_dir = 'temp'
-
-if not os.path.exists(temp_dir):
-    os.makedirs(temp_dir)
-
-temp_files = {
-    'md': f'{temp_dir}/temp.md',
-    'html': f'{temp_dir}/temp.html',
-    'htex': f'{temp_dir}/temp.htex',
-    'pdf': f'{temp_dir}/temp.pdf',
-}
+from modules import *
 
 
 def main(in_filepath, out_pdf=None):
@@ -25,19 +13,11 @@ def main(in_filepath, out_pdf=None):
     # Get executables: (1) MdToHTML (2) HTMLtoPDF, etc
     modules = _get_modules_to_execute(in_filepath, out_pdf)
 
-    try:
+    for module in modules:
+        print(f'Running {type(module).__name__}...')  # e.g.: 'Running MdToHTML...'
+        module.run()
 
-        for module in modules:
-            print(f'Running {type(module).__name__}...')  # e.g.: 'Running MdToHTML...'
-            module.run()
-
-        print(f'PDF generated into {out_pdf}')
-
-    finally:
-        # Delete temp files
-        for ext in temp_files:
-            if os.path.exists(temp_files[ext]):
-                os.remove(temp_files[ext])
+    print(f'PDF generated into {out_pdf}')
 
 
 def _get_path_name_ext(filepath: str):
@@ -50,21 +30,19 @@ def _get_path_name_ext(filepath: str):
 
 def _get_modules_to_execute(in_filepath, out_pdf):
     # For now, use given file to convert to PDF (if .md will be sorted out later)
-    html = in_filepath
     dir_path, filename, ext = _get_path_name_ext(in_filepath)
 
-    modules = []
+    modules = [FetchFile(in_filepath)]
 
     if ext == 'md':  # given MD, need to preprocess MD to be HTML
         modules += [
-            MdToMdWithoutWikilinks(in_filepath, temp_files['md']),
-            MdToHTML(temp_files['md'], temp_files['html'], title=filename, workdir=dir_path),
+            MdToMdWithoutWikilinks(),
+            MdToHTML(title=filename, workdir=dir_path),
         ]
-        # Make a temp HTML file our target file for PDF conversion
-        html = temp_files['html']
 
     modules += [
-        HTMLtoPDF(html, out_pdf),
+        HTMLtoPDF(),
+        ReturnFile(out_pdf)
     ]
 
     return modules
