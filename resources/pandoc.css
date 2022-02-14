@@ -69,7 +69,6 @@ a::selection {
 p {
     margin: 1em 0;
     overflow-wrap: break-word;
-    white-space: nowrap;
 }
 
 img {
