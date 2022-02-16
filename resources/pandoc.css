@@ -18,7 +18,7 @@ body {
 }
 
 h1:first-child, h2:first-child, h3:first-child, h4:first-child, h5:first-child, h6:first-child {
-    margin-top: 0; /* So that heading does not have */
+    margin-top: 0; /* So that first heading in file does not have indent from top of file */
 }
 
 figcaption {
@@ -321,7 +321,14 @@ table td {
 
 div.sourceCode {
     background-color: #ececec !important;
-    font-size: 60%;
+    font-size: 60%;  /* Small size so that 120 monospace characters can fit on one line */
     border: 0px !important;
     overflow: visible;
+}
+
+div.ref-source-academic {
+    /* For APA looking references so that first line is unindented and others are */
+    padding-left: 1.5em;
+    text-indent: -1.5em;
+    margin-top: 1em;
 }
