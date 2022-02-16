@@ -1,23 +1,37 @@
-import os
-
 from modules import *
 
 
-def main(in_filepath, out_pdf=None):
-    # Parse out location of md file and its name
-    dir_path, filename, _ = _get_path_name_ext(in_filepath)
+def to_pdf(in_filepath, out_filepath_pdf):
+    """
+    Converts `in_filepath` to PDF created in `out_filepath_pdf`
 
-    if out_pdf is None:  # output pdf is not given, put it next to the input file
-        out_pdf = dir_path + filename + '.pdf'
+    :param str in_filepath: Path to the input file, eg: '/Users/breedoon/CS166/Assignment 1.md'
+        Must be one of: md, html, ipynb
+    :param str out_filepath_pdf: Path to the output file (will be overridden if exists),
+        eg: '/Users/breedoon/CS166/PDF/Assignment 1.pdf'
+    """
 
     # Get executables: (1) MdToHTML (2) HTMLtoPDF, etc
-    modules = _get_modules_to_execute(in_filepath, out_pdf)
+    modules = _get_modules_to_execute(in_filepath, out_filepath_pdf)
 
     for module in modules:
         print(f'Running {type(module).__name__}...')  # e.g.: 'Running MdToHTML...'
         module.run()
 
-    print(f'PDF generated into {out_pdf}')
+    print(f'PDF generated into {out_filepath_pdf}')
+
+
+def _preprocess_inputs(in_file, out_path):
+    # Get exact
+    # Parse out location of md file and its name
+    dir_path, filename, _ = _get_path_name_ext(in_file)
+
+    if len(out_path.strip()) == 0:  # output path is not given, put it next to the input file
+        out_path = dir_path
+    else:
+        out_path = os.path.realpath(out_path.strip()) + '/'  # ensure has / at the end
+
+    return out_path + filename + '.pdf'
 
 
 def _get_path_name_ext(filepath: str):
@@ -49,11 +63,14 @@ def _get_modules_to_execute(in_filepath, out_pdf):
     return modules
 
 
-if __name__ == '__main__':
-    in_md = input('Enter location of your md/html file (e.g.: /Users/breedoon/Drive/CS166/Assignment 1.md)\n')
-    out_pdf = input('Enter location to the output pdf file (will be overridden if exists)\n'
-                    'or leave blank to generate in the same folder with the same name\n')
-    if len(out_pdf.strip()) == 0:  # blank
-        out_pdf = None
+def main(in_file, out_path):
+    out_pdf = _preprocess_inputs(in_file, out_path)
+    to_pdf(in_file, out_pdf)
 
-    main(in_md, out_pdf)
+
+if __name__ == '__main__':
+    in_file = input('Enter location of your md/html/ipynb file (e.g.: /Users/breedoon/CS166/Assignment 1.md)\n')
+    out_path = input('Enter location to store the produced PDF file (e.g.: /Users/breedoon/CS166/PDF/)\n'
+                     'or leave blank to generate in the same folder\n')
+
+    main(in_file, out_path)
