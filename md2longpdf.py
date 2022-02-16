@@ -36,8 +36,7 @@ def _preprocess_inputs(in_file, out_path):
 
 def _get_path_name_ext(filepath: str):
     """Parses out path, filename and extension of the given file"""
-    import re
-    dir_path, f1, f2, ext = re.compile(r'(?:(.*[\/])(.+)|^(.+))\.((?:md|html))').findall(filepath)[0]
+    dir_path, f1, f2, ext = re.compile(r'(?:(.*[\/])(.+)|^(.+))\.((?:md|html|ipynb))').findall(filepath)[0]
     filename = f1 + f2  # alternative groups, one will be empty one with filename
     return dir_path, filename, ext
 
@@ -48,12 +47,19 @@ def _get_modules_to_execute(in_filepath, out_pdf):
 
     modules = [FetchFile(in_filepath)]
 
-    if ext == 'md':  # given MD, need to preprocess MD to be HTML
+    # IPYNB -> MD
+    if ext == 'ipynb':
+        modules += [IPYNBtoMD()]
+        dir_path = temp_dir  # path to output images, if converting from ipynb, they will be in the temp folder
+
+    # MD -> HTML
+    if ext in ('ipynb', 'md'):  # given MD, need to preprocess MD to be HTML
         modules += [
             MdToMdWithoutWikilinks(),
             MdToHTML(title=filename, workdir=dir_path),
         ]
 
+    # HTML -> PDF
     modules += [
         HTMLtoPDF(),
         RemovePrinceWatermark(),

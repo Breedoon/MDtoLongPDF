@@ -1,21 +1,23 @@
 import os
+import re
+import shutil
 from functools import cache
 
-from bs4 import BeautifulSoup
 import numpy as np
-from pdfminer.layout import LAParams, LTTextBox
-from pdfminer.pdfpage import PDFPage
-from pdfminer.pdfinterp import PDFResourceManager
-from pdfminer.pdfinterp import PDFPageInterpreter
+from bs4 import BeautifulSoup
 from pdfminer.converter import PDFPageAggregator
-import shutil
+from pdfminer.layout import LAParams, LTTextBox
+from pdfminer.pdfinterp import PDFPageInterpreter
+from pdfminer.pdfinterp import PDFResourceManager
+from pdfminer.pdfpage import PDFPage
 
 temp_dir = 'temp'
 
 if not os.path.exists(temp_dir):
     os.makedirs(temp_dir)
 
-temp_file = lambda ext, filename='temp': f'{temp_dir}/{filename}.{ext}'
+# Generic format of temp files
+temp_file = lambda filename='temp.tmp': f'{temp_dir}/{filename}'
 
 
 class Module:
@@ -24,19 +26,23 @@ class Module:
     INPUT_FORMAT = '~'
     OUTPUT_FORMAT = '~'
 
+    @staticmethod
+    def _get_temp_file(ext, filename='temp'):
+        return temp_file(filename=f'{filename}.{ext}')
+
     @property
     def _input_source(self):
-        return temp_file(self.INPUT_FORMAT)
+        return self._get_temp_file(ext=self.INPUT_FORMAT)
 
     @property
     def output(self):
-        return temp_file(self.OUTPUT_FORMAT)
+        return self._get_temp_file(ext=self.OUTPUT_FORMAT)
 
     @property
     @cache  # so that its name is randomly generated once and then reused
     def input(self):
         """Internal file used in case input and output files are of same format"""
-        return temp_file(self.OUTPUT_FORMAT, filename=f"temp-{np.random.randint(1000)}")
+        return self._get_temp_file(ext=self.OUTPUT_FORMAT, filename=f"temp-{np.random.randint(1000)}")
 
     def run(self):
         """Runs the module"""
@@ -53,8 +59,6 @@ class MdToMdWithoutWikilinks(Module):
     OUTPUT_FORMAT = 'md'
 
     def _run(self):
-        import re
-
         with open(self.input, 'r') as f:
             md_data = f.read()
 
@@ -219,7 +223,7 @@ class FetchFile(CopyFile):
 
     @property
     def output(self):
-        return temp_file(self._ext)
+        return self._get_temp_file(ext=self._ext)
 
 
 class ReturnFile(CopyFile):
@@ -227,7 +231,7 @@ class ReturnFile(CopyFile):
 
     @property
     def input(self):
-        return temp_file(self._ext)
+        return self._get_temp_file(ext=self._ext)
 
     @property
     def output(self):
@@ -269,3 +273,24 @@ class _UncompressPDF(ProcessPDF):
 class _CompressPDF(ProcessPDF):
     def _run(self):
         os.system(f"""qpdf --stream-data=compress "{self.input}" "{self.output}" """)
+
+
+class IPYNBtoMD(Module):
+    INPUT_FORMAT = 'ipynb'
+    OUTPUT_FORMAT = 'md'
+
+    def _run(self):
+        import nbformat
+        from nbconvert import MarkdownExporter
+
+        with open(self.input, 'r') as f:
+            notebook = nbformat.reads(f.read(), as_version=4)
+
+        (body, resources) = MarkdownExporter().from_notebook_node(notebook)
+
+        with open(self.output, 'w') as f:
+            f.write(body)
+
+        for output, content in resources['outputs'].items():
+            with open(temp_file(filename=output), 'wb') as f:
+                f.write(content)
