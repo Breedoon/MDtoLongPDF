@@ -93,7 +93,7 @@ class MdToHTML(Module):
         self.wdir = workdir
 
     def _run(self):
-        cmd = f"""pandoc --css=resources/pandoc.css --self-contained --mathml """ \
+        cmd = f"""pandoc --css=resources/pandoc.css --self-contained --mathml --quiet """ \
               f""" -f markdown -t html "{self.input}" -o "{self.output}" """
 
         # if given title will put it onto the HTML so better not
