@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 from functools import cache
+from uuid import uuid4
 
 import numpy as np
 from bs4 import BeautifulSoup
@@ -42,7 +43,7 @@ class Module:
     @cache  # so that its name is randomly generated once and then reused
     def input(self):
         """Internal file used in case input and output files are of same format"""
-        return self._get_temp_file(ext=self.OUTPUT_FORMAT, filename=f"temp-{np.random.randint(1000)}")
+        return self._get_temp_file(ext=self.INPUT_FORMAT, filename=f"temp-{uuid4().hex}")
 
     def run(self):
         """Runs the module"""
@@ -110,22 +111,27 @@ class MdToHTML(Module):
 
 
 class HTMLtoPDF(Module):
-    INPUT_FORMAT = 'html'
-    OUTPUT_FORMAT = 'pdf'
     """
+    Step 0:
+        Add dummy text to the end of the html so that it's the lowest text on the PDF
     Step 1:
         generate a PDF with maximum possible page length (10m+) to fit all the content
         to calculate how much it can be trimmed
     Step 2:
-        read the max PDF generated on the previous step ant find where the lowest content item is;
-        then generate a new PDF with paper height exactly to fit the lowest item + margin
+        read the max PDF generated on the previous step ant find where the lowest content item is (the dummy text
+    Step 3:
+        generate a new PDF with paper height exactly to fit the lowest item + margin
     """
+    INPUT_FORMAT = 'html'
+    OUTPUT_FORMAT = 'pdf'
 
     CMD = """prince "{input}" -o "{output}" """
     PTS_IN_MM = 1 / 25.4 * 72  # 72 points in inch, 1 inch = 22.4 mm
-    _STYLE_TAG_ID = 'page-style'
 
     def _run(self):
+        self._style_tag_id = uuid4().hex  # id of style element specifying page dimensions
+        self._dummy_text = uuid4().hex  # text to be put onto the bottom of the page to calculate its effective length
+
         for page_height_m in [10, 100, 1000]:  # -meter-long paper
             self._make_max_pdf(page_height_m=page_height_m)
             if self._get_output_page_count() == 1:  # content fit on one page, no need to try to increase paper size
@@ -143,10 +149,10 @@ class HTMLtoPDF(Module):
             return len(list(PDFPage.get_pages(f)))
 
     def _make_max_pdf(self, page_height_m=10):
-        self._write_pdf(page_height_mm=page_height_m * 1000)
+        self._write_pdf(page_height_mm=page_height_m * 1000, add_dummy_text=True)
 
     def _make_fit_pdf(self, page_height_mm):
-        self._write_pdf(page_height_mm=page_height_mm)
+        self._write_pdf(page_height_mm=page_height_mm, add_dummy_text=False)
 
     def _calculate_new_page_height_mm(self):
         lowest_y = self._get_lowest_y_mm()
@@ -179,12 +185,20 @@ class HTMLtoPDF(Module):
         lowest_y = np.array(bboxes)[:, [1, 3]].min()  # coordinates begin from lower left
         return (page_height - lowest_y) / self.PTS_IN_MM  # convert points to mm
 
-    def _write_pdf(self, **kwargs):
+    def _write_pdf(self, add_dummy_text=False, **kwargs):
         bs = BeautifulSoup(open(self.input).read(), features="lxml")
 
-        existing_style = bs.find('style', dict(id=self._STYLE_TAG_ID))  # if added page style before
+        existing_style = bs.find('style', dict(id=self._style_tag_id))  # if added page style before
         if existing_style is not None:  # added this style on prev iteration, remove and add new one
             existing_style.extract()
+
+        dummy_text_el = bs.find('span', dict(id=self._dummy_text))  # find if there is dummy text
+        if dummy_text_el is not None:  # remove dummy text element (will add back if necessary)
+            dummy_text_el.extract()
+        if add_dummy_text:
+            dummy_text_el = BeautifulSoup(f"""<span style="font-size: 1px;" id="{self._dummy_text}">{self._dummy_text}</span>""",
+                                          features="lxml").span
+            bs.body.append(dummy_text_el)
 
         style = self._get_page_style(**kwargs)
         bs.head.append(style)
@@ -193,9 +207,8 @@ class HTMLtoPDF(Module):
 
         os.system(self.CMD.format(input=self.input, output=self.output))
 
-    @staticmethod
-    def _get_page_style(page_width_mm=210, page_height_mm=297, left_mm=15, right_mm=15, top_mm=15, bottom_mm=15):
-        return BeautifulSoup(f"""<style id="{HTMLtoPDF._STYLE_TAG_ID}">
+    def _get_page_style(self, page_width_mm=210, page_height_mm=297, left_mm=15, right_mm=15, top_mm=15, bottom_mm=15):
+        return BeautifulSoup(f"""<style id="{self._style_tag_id}">
         @page {{
         size: {page_width_mm}mm {page_height_mm + bottom_mm}mm;
           margin: {top_mm}mm {right_mm}mm 0mm {left_mm}mm;
