@@ -275,7 +275,17 @@ class RemovePrinceWatermark(ProcessPDF):
 
 class _RemovePrinceWatermarkBox(ProcessPDF):
     def _run(self):
-        os.system(f"""LANG=C LC_ALL=C sed -e "s/580\.2756/-40\.2756/g" < "{self.input}" > "{self.output}" """)
+        os.system(
+            f"""LANG=C LC_ALL=C sed """
+            f"""-e "s/555\.2756/-99\.9999/g" """
+            f"""-e "s/580\.2756/-99\.9999/g" """
+            f"""-e "s/265\.2756/-99\.9999/g" """
+            f"""-e "s/515\.2756/-99\.9999/g" """
+            f"""-e "s/This document was created with Prince, a great way of getting web content onto paper\./                                                                                     /g" """
+            f"""-e "s/www\.princexml\.com/                 /g" """
+            f"""-e "s/Prince - Non-commercial License/                               /g" """
+            f""" < "{self.input}" > "{self.output}" """
+        )
 
 
 class _UncompressPDF(ProcessPDF):
