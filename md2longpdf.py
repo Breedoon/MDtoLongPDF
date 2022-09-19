@@ -57,6 +57,7 @@ def _get_modules_to_execute(in_filepath, out_pdf):
     if ext in ('ipynb', 'md'):  # given MD, need to preprocess MD to be HTML
         modules += [
             MdToMdWithoutWikilinks(),
+            SlugifyMdSectionLinks(),
             MdToHTML(title=filename, workdir=dir_path),
         ]
 

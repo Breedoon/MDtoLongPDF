@@ -11,6 +11,7 @@ from pdfminer.layout import LAParams, LTTextBox
 from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfpage import PDFPage
+from slugify import slugify
 
 temp_dir = 'temp'
 
@@ -64,18 +65,45 @@ class MdToMdWithoutWikilinks(Module):
             md_data = f.read()
 
         wikilinks_pattern = re.compile(r'\[\[\s*(?P<target>[^][|]+?)(\s*\|\s*(?P<label>[^][]+))?\s*\]\]')
-        section_pattern = re.compile(r'^((?:.{0}|.*[^\\]))\#(.+)')
         new_md_data = ''
         prev_i = 0
         for match in wikilinks_pattern.finditer(md_data):
             target, label = match.group(1, 3)
             if label is None:
                 label = target
+            new_md_data = new_md_data + md_data[prev_i: match.span()[0]] + f"[{label}]({target})"
+            prev_i = match.span()[1]
+
+        new_md_data = new_md_data + md_data[prev_i:]
+
+        with open(self.output, 'w') as f:
+            f.write(new_md_data)
+
+
+class SlugifyMdSectionLinks(Module):
+    """This module processes the Markdown links to sections within the same document in a way
+    that would allow them to be clickable after being converted to HTML
+
+    [cool new section](#Section 33) -> [cool new section](#section-33)
+    """
+    INPUT_FORMAT = 'md'
+    OUTPUT_FORMAT = 'md'
+
+    def _run(self):
+        with open(self.input, 'r') as f:
+            md_data = f.read()
+
+        md_links_pattern = re.compile(r'\[(?P<label>[^\[]+)\]\((?P<target>.*)\)')
+        section_pattern = re.compile(r'^((?:.{0}|.*[^\\]))\#(.+)')
+        new_md_data = ''
+        prev_i = 0
+        for match in md_links_pattern.finditer(md_data):
+            label, target = match.group(1, 2)
             sections = section_pattern.findall(target)
             if len(sections) != 0:  # referencing a section in this link
                 file, section = sections[0]
-                section = re.compile(r'\ +').sub('-', re.compile(r'[^a-zA-Z0-9\ ]').sub(' ', section)).lower()
-                target = file + '#' + section
+                slug = slugify(section)
+                target = f'{file}#{slug}'
             new_md_data = new_md_data + md_data[prev_i: match.span()[0]] + f"[{label}]({target})"
             prev_i = match.span()[1]
 
@@ -196,8 +224,9 @@ class HTMLtoPDF(Module):
         if dummy_text_el is not None:  # remove dummy text element (will add back if necessary)
             dummy_text_el.extract()
         if add_dummy_text:
-            dummy_text_el = BeautifulSoup(f"""<span style="font-size: 1px;" id="{self._dummy_text}">{self._dummy_text}</span>""",
-                                          features="lxml").span
+            dummy_text_el = BeautifulSoup(
+                f"""<span style="font-size: 1px;" id="{self._dummy_text}">{self._dummy_text}</span>""",
+                features="lxml").span
             bs.body.append(dummy_text_el)
 
         style = self._get_page_style(**kwargs)
