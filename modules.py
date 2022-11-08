@@ -28,6 +28,16 @@ class Module:
     INPUT_FORMAT = '~'
     OUTPUT_FORMAT = '~'
 
+    def __init__(self, **kwargs) -> None:
+        super().__init__()
+        self.kwargs = kwargs  # save kwargs just in case
+        # add every kwarg as self.property
+        for key, val in kwargs.items():
+            try:
+                exec(f'self.{key} = """{val}"""')
+            except Exception:
+                continue
+
     @staticmethod
     def _get_temp_file(ext, filename='temp'):
         return temp_file(filename=f'{filename}.{ext}')
@@ -117,23 +127,22 @@ class MdToHTML(Module):
     INPUT_FORMAT = 'md'
     OUTPUT_FORMAT = 'html'
 
-    def __init__(self, title=None, workdir=None):
+    def __init__(self, **kwargs):
         """
         :param title: Title to be given to the HTML file
         :param workdir: directory from which the referenced files can be accessed (images, etc)
         """
-        self.title = title
-        self.wdir = workdir
+        super().__init__(**kwargs)
 
     def _run(self):
-        cmd = f"""pandoc --css=resources/pandoc.css --self-contained --mathml --quiet """ \
+        cmd = f"""pandoc --css=resources/pandoc.css --self-contained --mathml --quiet --filter pandoc-mermaid """ \
               f""" -f markdown -t html "{self.input}" -o "{self.output}" """
 
         # if given title will put it onto the HTML so better not
-        if self.title is not None:
+        if hasattr(self, 'title'):
             cmd += f"""--title="{self.title}" """
-        if self.wdir is not None:
-            cmd += f"""--resource-path="{self.wdir}" """
+        if hasattr(self, 'workdir'):
+            cmd += f"""--resource-path="{self.workdir}" """
 
         os.system(cmd)
 
@@ -153,7 +162,7 @@ class HTMLtoPDF(Module):
     INPUT_FORMAT = 'html'
     OUTPUT_FORMAT = 'pdf'
 
-    CMD = """prince "{input}" -o "{output}" """
+    CMD = """prince "{input}" -o "{output}" --javascript """
     PTS_IN_MM = 1 / 25.4 * 72  # 72 points in inch, 1 inch = 22.4 mm
 
     def _run(self):
@@ -248,7 +257,8 @@ class HTMLtoPDF(Module):
 class CopyFile(Module):
     """Parent class for copying a file"""
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, **kwargs):
+        super().__init__(**kwargs)
         self._filepath = filepath
         self._ext = filepath.strip().split('.')[-1]  # extract extension
 

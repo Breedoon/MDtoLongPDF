@@ -2,7 +2,7 @@ from modules import *
 import argparse
 
 
-def to_pdf(in_filepath, out_filepath_pdf):
+def to_pdf(in_filepath, out_filepath_pdf, **kwargs):
     """
     Converts `in_filepath` to PDF created in `out_filepath_pdf`
 
@@ -13,7 +13,7 @@ def to_pdf(in_filepath, out_filepath_pdf):
     """
 
     # Get executables: (1) MdToHTML (2) HTMLtoPDF, etc
-    modules = _get_modules_to_execute(in_filepath, out_filepath_pdf)
+    modules = _get_modules_to_execute(in_filepath, out_filepath_pdf, **kwargs)
 
     for module in modules:
         print(f'Running {type(module).__name__}...')  # e.g.: 'Running MdToHTML...'
@@ -42,38 +42,38 @@ def _get_path_name_ext(filepath: str):
     return dir_path, filename, ext
 
 
-def _get_modules_to_execute(in_filepath, out_pdf):
+def _get_modules_to_execute(in_filepath, out_pdf, **kwargs):
     # For now, use given file to convert to PDF (if .md will be sorted out later)
-    dir_path, filename, ext = _get_path_name_ext(in_filepath)
+    kwargs['workdir'], kwargs['title'], ext = _get_path_name_ext(in_filepath)
 
-    modules = [FetchFile(in_filepath)]
+    modules = [FetchFile(filepath=in_filepath, **kwargs)]
 
     # IPYNB -> MD
     if ext == 'ipynb':
-        modules += [IPYNBtoMD()]
-        dir_path = temp_dir  # path to output images, if converting from ipynb, they will be in the temp folder
+        modules += [IPYNBtoMD(**kwargs)]
+        kwargs['workdir'] = temp_dir  # path to output images, if converting from ipynb, they will be in the temp folder
 
     # MD -> HTML
     if ext in ('ipynb', 'md'):  # given MD, need to preprocess MD to be HTML
         modules += [
-            MdToMdWithoutWikilinks(),
-            SlugifyMdSectionLinks(),
-            MdToHTML(title=filename, workdir=dir_path),
+            MdToMdWithoutWikilinks(**kwargs),
+            SlugifyMdSectionLinks(**kwargs),
+            MdToHTML(**kwargs),
         ]
 
     # HTML -> PDF
     modules += [
-        HTMLtoPDF(),
-        RemovePrinceWatermark(),
-        ReturnFile(out_pdf)
+        HTMLtoPDF(**kwargs),
+        RemovePrinceWatermark(**kwargs),
+        ReturnFile(filepath=out_pdf, **kwargs)
     ]
 
     return modules
 
 
-def main(in_file, out_path):
+def main(in_file, out_path, **kwargs):
     out_pdf = _preprocess_inputs(in_file, out_path)
-    to_pdf(in_file, out_pdf)
+    to_pdf(in_file, out_pdf, **kwargs)
 
 
 def _get_args_from_input():
@@ -85,19 +85,20 @@ def _get_args_from_input():
 
 
 def _get_args_from_command():
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='Process some integers.', argument_default='')
     parser.add_argument('--input-file', '-i', dest='in_file', required=False,
                         help='absolute path to the md/html/ipynb file')
     parser.add_argument('--output-path', '-o', dest='out_path', required=False,
                         help='absolute path to directory where to put the produced PDF file')
-    args = parser.parse_args()
-    return args.in_file, args.out_path
+    args, raw_kwargs = parser.parse_known_args()
+    kwargs = {k.strip('-'): v for k, v in map(lambda x: x.split("=")[:2], raw_kwargs)}
+    return args.in_file, args.out_path, kwargs
 
 
 if __name__ == '__main__':
-    in_file, out_path = _get_args_from_command()
+    in_file, out_path, kwargs = _get_args_from_command()
 
     if in_file is None:  # args weren't passed via command line, ask to input
         in_file, out_path = _get_args_from_input()
 
-    main(in_file, out_path)
+    main(in_file, out_path, **kwargs)
