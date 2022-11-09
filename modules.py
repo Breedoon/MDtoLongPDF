@@ -162,8 +162,18 @@ class HTMLtoPDF(Module):
     INPUT_FORMAT = 'html'
     OUTPUT_FORMAT = 'pdf'
 
-    CMD = """prince "{input}" -o "{output}" --javascript """
+    CMD = """prince "{input}" -o "{output}" --javascript --baseurl="{workdir}" """
     PTS_IN_MM = 1 / 25.4 * 72  # 72 points in inch, 1 inch = 22.4 mm
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.page_width_mm = 210 if not hasattr(self, 'page_width_mm') else float(self.page_width_mm)
+        self.left_mm = 15 if not hasattr(self, 'margin_left_mm') else float(self.margin_left_mm)
+        self.right_mm = 15 if not hasattr(self, 'margin_right_mm') else float(self.margin_right_mm)
+        self.top_mm = 15 if not hasattr(self, 'margin_top_mm') else float(self.margin_top_mm)
+        self.bottom_mm = 15 if not hasattr(self, 'margin_bottom_mm') else float(self.margin_bottom_mm)
+
+
 
     def _run(self):
         self._style_tag_id = uuid4().hex  # id of style element specifying page dimensions
@@ -193,7 +203,7 @@ class HTMLtoPDF(Module):
 
     def _calculate_new_page_height_mm(self):
         lowest_y = self._get_lowest_y_mm()
-        new_height = np.ceil(lowest_y)
+        new_height = lowest_y
         return new_height
 
     def _get_lowest_y_mm(self):
@@ -243,13 +253,13 @@ class HTMLtoPDF(Module):
 
         open(self.input, "w").write(str(bs))
 
-        os.system(self.CMD.format(input=self.input, output=self.output))
+        os.system(self.CMD.format(input=self.input, output=self.output, **self.kwargs))
 
-    def _get_page_style(self, page_width_mm=210, page_height_mm=297, left_mm=15, right_mm=15, top_mm=15, bottom_mm=15):
+    def _get_page_style(self, page_height_mm=297):
         return BeautifulSoup(f"""<style id="{self._style_tag_id}">
         @page {{
-        size: {page_width_mm}mm {page_height_mm + bottom_mm}mm;
-          margin: {top_mm}mm {right_mm}mm 0mm {left_mm}mm;
+        size: {self.page_width_mm}mm {page_height_mm + self.bottom_mm}mm;
+          margin: {self.top_mm}mm {self.right_mm}mm 0mm {self.left_mm}mm;
         }}
         </style>""", features="lxml").style
 
