@@ -1,3 +1,4 @@
+#!./venv/bin/python
 from modules import *
 import argparse
 
