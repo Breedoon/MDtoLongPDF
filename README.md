@@ -7,6 +7,8 @@
 	- [Prerequisites](#prerequisites)
 	- [Installation](#installation)
 - [Usage](#usage)
+    -  [Running from Command-line](#running-from-command-line)
+    -  [Running as a Python program](#running-as-a-python-program)
     -  [Default Parameters](#default-parameters)
 - [Notes](#notes)
 	- [Removing PrinceXML Watermark](#removing-princexml-watermark)
@@ -38,17 +40,64 @@ So, this script aims to provide a workaround when converting from inherently unp
     ```sh  
     git clone https://github.com/Breedoon/MDtoLongPDF.git
     ```  
-3. Install `requirements.txt`:
+3. Create a virtual environment and activate it:
+   ```sh  
+    python3 -m venv ./venv
+    source venv/bin/activate
+   ```  
+4. Install `requirements.txt`:
    ```sh  
     pip install -r requirements.txt
    ```  
 
 ## Usage  
-  
-1. To use the script, run:
+
+There are two ways to run the script: with command-line arguments, and with arguments from Python inputs.
+
+### Running from Command-line 
+
+The usage of the script from command line is as follows:
 
 ```sh
-python md2longpdf.py
+./md2longpdf.py [in_file] [-h] [--output-path=OUT_PATH]
+
+positional arguments:
+  in_file               absolute path to the md/html/ipynb file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --output-path=OUT_PATH, -o OUT_PATH
+                        absolute path to directory where to put the produced PDF file
+```
+
+For example:
+```sh
+./md2longpdf.py README.md -o resources
+```
+```
+Running FetchFile...
+Running HTMLtoPDF...
+Running RemovePrinceWatermark...
+Running ReturnFile...
+PDF generated into /Users/breedoon/MDtoLongPDF/resources/README.pdf
+```
+
+If you do not have `qpdf` installed to remove the `PxinceXML` watermark, the output file will still be generated, just with the watermark. 
+
+#### Additional parameters
+
+You can also specify additional parameters that will be passed to the execution modules:
+
+```sh
+./md2longpdf.py README.md -o resources --margin_bottom_mm=0 --page_width_mm=210
+```
+
+### Running as a Python program
+
+1. First just run:
+
+```sh
+./md2longpdf.py
 ```
 
 2. Then you will be prompted to enter path to you `.md`, `.html`, or `.ipynb` file, for example:
@@ -72,8 +121,6 @@ If you do not have `qpdf` installed to remove the `PxinceXML` watermark, the out
 ### Default Parameters
 
 The stylesheet used to generate HTML is [resources/pandoc.css](resources/pandoc.css) based on [this stylesheet](https://gist.github.com/killercup/5917178). The simplest way to change scale is to modify `html { font-size: 120%; ... }`.
-
-The default PDF margins used are 15mm from each side, and can be changed in [modules.py](modules.py) in the `HTMLtoPDF` class.
 
 ## Notes
 
