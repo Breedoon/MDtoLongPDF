@@ -86,7 +86,7 @@ def _get_args_from_input():
 
 def _get_args_from_command():
     parser = argparse.ArgumentParser(description='Process some integers.', argument_default='')
-    parser.add_argument('--input-file', '-i', dest='in_file', required=False,
+    parser.add_argument(dest='in_file', nargs='?',
                         help='absolute path to the md/html/ipynb file')
     parser.add_argument('--output-path', '-o', dest='out_path', required=False,
                         help='absolute path to directory where to put the produced PDF file')
@@ -98,7 +98,7 @@ def _get_args_from_command():
 if __name__ == '__main__':
     in_file, out_path, kwargs = _get_args_from_command()
 
-    if in_file is None:  # args weren't passed via command line, ask to input
+    if in_file == '':  # args weren't passed via command line, ask to input
         in_file, out_path = _get_args_from_input()
 
     main(in_file, out_path, **kwargs)
